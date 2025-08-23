@@ -75,7 +75,7 @@ export default function CodeUploadForm() {
       async () => {
         setStatus("testing");
         try {
-          await triggerTestRunner(filePath, user.uid);
+          await triggerTestRunner(filePath);
           setStatus("success");
           toast({ title: "Submission Successful!", description: "Your code is being tested and will appear on the leaderboard." });
           setFile(null);
@@ -83,6 +83,7 @@ export default function CodeUploadForm() {
         } catch (error) {
           setStatus("error");
           toast({ title: "Submission Failed", description: "The testing process could not be started.", variant: "destructive" });
+          console.error(error)
           setTimeout(() => setStatus("idle"), 5000);
         }
       }

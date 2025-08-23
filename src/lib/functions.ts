@@ -1,6 +1,4 @@
 
-"use server";
-
 import { auth } from "./firebase";
 
 export async function triggerTestRunner(filePath: string) {
@@ -11,13 +9,13 @@ export async function triggerTestRunner(filePath: string) {
 
   const token = await user.getIdToken();
 
-  const response = await fetch('/api/functions', {
+  const response = await fetch('/api/trigger-test', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ data: { filePath, userId: user.uid } }),
+    body: JSON.stringify({ filePath }),
   });
 
   if (!response.ok) {

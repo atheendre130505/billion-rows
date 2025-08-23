@@ -138,8 +138,8 @@ export default function CodeUploadForm() {
           )}
         </CardContent>
         <CardFooter className="flex-col items-start gap-4">
-          <Button type="submit" size="lg" disabled={!file || status !== 'idle' || !user}>
-            <span className="text-accent-foreground">Submit for Testing</span>
+          <Button type="submit" size="lg" disabled={!file || status !== 'idle' || !user} variant="default">
+            Submit for Testing
           </Button>
           {status !== 'idle' && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">

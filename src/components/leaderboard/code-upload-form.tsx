@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { auth, storage } from "@/lib/firebase";
 import {
   Card,
   CardContent,
@@ -13,11 +15,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { UploadCloud, FileText, X, LoaderCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { triggerTestRunner } from "@/lib/functions";
+import { useAuthState } from "react-firebase-hooks/auth";
 
 export default function CodeUploadForm() {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "uploading" | "testing" | "error" | "success">("idle");
   const { toast } = useToast();
+  const [user] = useAuthState(auth);
 
   const onDrop = useCallback((acceptedFiles: File[], fileRejections: any[]) => {
     if (fileRejections.length > 0) {
@@ -43,56 +48,54 @@ export default function CodeUploadForm() {
     setFile(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) {
-      toast({
-        title: "No file selected",
-        description: "Please select a file to submit.",
-        variant: "destructive",
-      });
+      toast({ title: "No file selected", description: "Please select a file to submit.", variant: "destructive" });
       return;
     }
-    
-    setStatus("uploading");
-    // Simulate API call
-    setTimeout(() => {
-      setStatus("testing");
-      setTimeout(() => {
-        // Simulate success/error
-        const isSuccess = Math.random() > 0.3;
-        if (isSuccess) {
-          setStatus("success");
-          toast({
-            title: "Submission Successful!",
-            description: "Your code has been tested and added to the leaderboard.",
-          });
-        } else {
-          setStatus("error");
-           toast({
-            title: "Submission Failed",
-            description: "Your code failed validation. Please check and resubmit.",
-            variant: "destructive",
-          });
-        }
-        // Reset after a while
-        setTimeout(() => setStatus("idle"), 5000);
-      }, 3000);
-    }, 1500);
-  };
+    if (!user) {
+      toast({ title: "Not authenticated", description: "Please log in to submit your code.", variant: "destructive" });
+      return;
+    }
 
+    setStatus("uploading");
+    const filePath = `submissions/${user.uid}/${Date.now()}_${file.name}`;
+    const storageRef = ref(storage, filePath);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on(
+      "state_changed",
+      null,
+      (error) => {
+        console.error("Upload failed:", error);
+        setStatus("error");
+        toast({ title: "Upload Failed", description: "There was an error uploading your file.", variant: "destructive" });
+      },
+      async () => {
+        setStatus("testing");
+        try {
+          await triggerTestRunner(filePath, user.uid);
+          setStatus("success");
+          toast({ title: "Submission Successful!", description: "Your code is being tested and will appear on the leaderboard." });
+          setFile(null);
+          setTimeout(() => setStatus("idle"), 5000);
+        } catch (error) {
+          setStatus("error");
+          toast({ title: "Submission Failed", description: "The testing process could not be started.", variant: "destructive" });
+          setTimeout(() => setStatus("idle"), 5000);
+        }
+      }
+    );
+  };
+  
   const getStatusMessage = () => {
     switch (status) {
-      case "uploading":
-        return "Uploading your file...";
-      case "testing":
-        return "Testing your code against the dataset...";
-      case "error":
-        return "Validation failed. Please try again.";
-      case "success":
-        return "Your submission was successful!";
-      default:
-        return "Awaiting submission...";
+      case "uploading": return "Uploading your file...";
+      case "testing": return "Testing your code against the dataset...";
+      case "error": return "An error occurred. Please try again.";
+      case "success": return "Your submission was successful!";
+      default: return "Awaiting submission...";
     }
   };
 
@@ -101,7 +104,7 @@ export default function CodeUploadForm() {
       <CardHeader>
         <CardTitle>Submit Your Solution</CardTitle>
         <CardDescription>
-          Drag and drop your .java file or click to select a file.
+          Drag and drop your .java file or click to select a file. You must be logged in.
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -112,7 +115,7 @@ export default function CodeUploadForm() {
                 <FileText className="h-6 w-6 text-primary" />
                 <span className="font-medium">{file.name}</span>
               </div>
-              <Button variant="ghost" size="icon" onClick={removeFile}>
+              <Button variant="ghost" size="icon" onClick={removeFile} disabled={status !== 'idle'}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -134,7 +137,7 @@ export default function CodeUploadForm() {
           )}
         </CardContent>
         <CardFooter className="flex-col items-start gap-4">
-          <Button type="submit" size="lg" disabled={!file || status !== 'idle'}>
+          <Button type="submit" size="lg" disabled={!file || status !== 'idle' || !user}>
             <span className="text-accent-foreground">Submit for Testing</span>
           </Button>
           {status !== 'idle' && (

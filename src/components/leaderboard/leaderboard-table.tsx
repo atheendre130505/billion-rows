@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -20,29 +20,21 @@ import {
 import { ChevronsUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-
-type Submission = {
-  rank: number;
-  username: string;
-  avatarUrl: string;
-  executionTime: number;
-  language: "Java";
-  date: Date;
-};
-
-const MOCK_DATA: Submission[] = [
-  { rank: 1, username: 'PerfWizard', avatarUrl: 'https://i.pravatar.cc/150?u=a1', executionTime: 1250, language: 'Java', date: new Date('2024-07-28T10:00:00Z') },
-  { rank: 2, username: 'CodeNinja', avatarUrl: 'https://i.pravatar.cc/150?u=a2', executionTime: 1305, language: 'Java', date: new Date('2024-07-27T15:30:00Z') },
-  { rank: 3, username: 'DataCruncher', avatarUrl: 'https://i.pravatar.cc/150?u=a3', executionTime: 1320, language: 'Java', date: new Date('2024-07-29T09:00:00Z') },
-  { rank: 4, username: 'ByteBlaster', avatarUrl: 'https://i.pravatar.cc/150?u=a4', executionTime: 1400, language: 'Java', date: new Date('2024-07-26T11:45:00Z') },
-  { rank: 5, username: 'AlgoQueen', avatarUrl: 'https://i.pravatar.cc/150?u=a5', executionTime: 1452, language: 'Java', date: new Date('2024-07-29T11:00:00Z') },
-  { rank: 6, username: 'JavaGuru', avatarUrl: 'https://i.pravatar.cc/150?u=a6', executionTime: 1510, language: 'Java', date: new Date('2024-07-25T18:00:00Z') },
-  { rank: 7, username: 'SpeedDemon', avatarUrl: 'https://i.pravatar.cc/150?u=a7', executionTime: 1515, language: 'Java', date: new Date('2024-07-28T14:20:00Z') },
-];
+import { getLeaderboard, type Submission } from "@/lib/db";
+import { Skeleton } from "../ui/skeleton";
 
 export default function LeaderboardTable() {
-  const [data, setData] = useState<Submission[]>(MOCK_DATA);
+  const [data, setData] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(true);
   const [sortConfig, setSortConfig] = useState<{ key: 'executionTime', direction: 'ascending' | 'descending' } | null>({ key: 'executionTime', direction: 'ascending' });
+
+  useEffect(() => {
+    const unsubscribe = getLeaderboard((submissions) => {
+      setData(submissions);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const sortedData = useMemo(() => {
     let sortableItems = [...data];
@@ -78,6 +70,38 @@ export default function LeaderboardTable() {
     return <ArrowDown className="ml-2 h-4 w-4" />;
   }
 
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-48 self-end" />
+        <div className="rounded-lg border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[80px] text-center">Rank</TableHead>
+                <TableHead>Username</TableHead>
+                <TableHead>Execution Time (ms)</TableHead>
+                <TableHead>Language</TableHead>
+                <TableHead>Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(5)].map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-8 w-8 mx-auto" /></TableCell>
+                  <TableCell><div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-6 w-32" /></div></TableCell>
+                  <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex items-center justify-end mb-4">
@@ -108,7 +132,7 @@ export default function LeaderboardTable() {
           </TableHeader>
           <TableBody>
             {sortedData.map((submission) => (
-              <TableRow key={submission.username}>
+              <TableRow key={submission.id}>
                 <TableCell className="text-center font-bold text-lg">{submission.rank}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">

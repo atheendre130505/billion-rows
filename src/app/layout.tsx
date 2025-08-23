@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: '1BRC Speedster',
+  title: 'Billion Row',
   description: 'A public web app for the 1 Billion Row Challenge.',
 };
 

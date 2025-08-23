@@ -14,7 +14,7 @@ export default function Footer() {
           </Link>
         </div>
         <p className="mt-2">
-          1BRC Speedster - Built with passion for performance.
+          Billion Row - Built with passion for performance.
         </p>
       </div>
     </footer>

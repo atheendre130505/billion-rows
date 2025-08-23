@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "gcp-build": ""
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
@@ -43,7 +44,6 @@
     "embla-carousel-react": "^8.6.0",
     "firebase": "^10.12.2",
     "firebase-admin": "^12.1.1",
-
     "react-firebase-hooks": "^5.1.1",
     "genkit": "^1.14.1",
     "lucide-react": "^0.475.0",

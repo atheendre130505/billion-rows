@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { useAuthState } from "react-firebase-hooks/auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -14,16 +14,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogIn, LogOut } from "lucide-react";
+import { Skeleton } from "../ui/skeleton";
 
 export default function AuthButton() {
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-    });
-    return () => unsubscribe();
-  }, []);
+  const [user, loading, error] = useAuthState(auth);
 
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
@@ -42,6 +36,15 @@ export default function AuthButton() {
     }
   };
 
+  if (loading) {
+    return <Skeleton className="h-10 w-36" />;
+  }
+
+  if (error) {
+    console.error("Authentication error:", error);
+    return <Button variant="destructive">Login Error</Button>;
+  }
+
   if (user) {
     return (
       <DropdownMenu>
@@ -49,7 +52,7 @@ export default function AuthButton() {
           <Button variant="ghost" className="relative h-10 w-10 rounded-full">
             <Avatar className="h-10 w-10">
               {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User Avatar'} />}
-              <AvatarFallback>{user.displayName ? user.displayName.charAt(0) : 'U'}</AvatarFallback>
+              <AvatarFallback>{user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>

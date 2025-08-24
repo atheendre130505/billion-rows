@@ -1,63 +1,53 @@
 import { NextResponse } from 'next/server';
+import { GoogleAuth } from 'google-auth-library';
+
+import { NextResponse } from 'next/server';
 import { auth, db } from '@/lib/firebase-admin';
 
-import { PubSub } from '@google-cloud/pubsub';
+// ** IMPORTANT: Replace with your actual Cloud Run Service URL after deployment **
+// You can find this URL in the Cloud Run service details in the Google Cloud Console
+// or in the output of the `gcloud run deploy` command.
+const CLOUD_RUN_URL = 'YOUR_CLOUD_RUN_URL_HERE';
 
-async function runTest(filePath: string, userId: string): Promise<{ executionTime: number; status: 'Success' | 'Failed' }> {
-  // Simulate test execution
-  console.log(`Running test for ${filePath} by user ${userId}`);
-  await new Promise(resolve => setTimeout(resolve, 5000)); // 5s "test"
-  
-  const success = Math.random() > 0.2; // 80% success rate
-  if (success) {
-    const executionTime = 1000 + Math.floor(Math.random() * 1000);
-    return { executionTime, status: 'Success' };
-  } else {
-    return { executionTime: 0, status: 'Failed' };
-  }
-}
-
-// Initialize Pub/Sub client
-const pubSubClient = new PubSub();
+// Use GoogleAuth to get an identity token for the Cloud Run service
+// This ensures that only your authenticated Firebase Function can call the Cloud Run service.
+// The identity token is automatically handled by the library in server environments.
+const auth = new GoogleAuth();
 
 export async function POST(req: Request) {
-    const authorization = req.headers.get('Authorization');
-    if (!authorization) {
-        return new NextResponse('Unauthorized', { status: 401 });
+  // Check if the Cloud Run URL placeholder has been replaced
+  if (CLOUD_RUN_URL === 'YOUR_CLOUD_RUN_URL_HERE') {
+    console.error('CLOUD_RUN_URL has not been set in src/app/api/trigger-test/route.ts');
+    return NextResponse.json(
+      { error: 'Server not configured: Cloud Run URL is missing.' },
+      { status: 500 }
+    );
+  }
+
+  try {
+    // 1. Get language and code from the request body
+    const { language, code } = await req.json();
+
+    if (!language || !code) {
+      return NextResponse.json({ error: 'Language and code are required.' }, { status: 400 });
     }
 
-    const idToken = authorization.split('Bearer ')[1];
-    if (!idToken) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    // 2. Base64 encode the code
+    const encodedCode = Buffer.from(code).toString('base64');
 
-    try {
-        const decodedToken = await auth.verifyIdToken(idToken);
-        const { filePath } = await req.json();
+    // 3. Get an authenticated client for the Cloud Run service
+    const client = await auth.getIdTokenClient(CLOUD_RUN_URL);
 
-        if (!filePath) {
-            return new NextResponse(JSON.stringify({ error: 'File path is required.' }), { status: 400 });
-        }
+    // 4. Send the code to the Cloud Run service
+    const response = await client.request({
+      url: CLOUD_RUN_URL,
+      method: 'POST',
+      data: { language, code: encodedCode },
+      responseType: 'json',
+    });
 
-        const userRecord = await auth.getUser(decodedToken.uid);
-        const username = userRecord.displayName || 'Anonymous';
-        const avatarUrl = userRecord.photoURL || `https://i.pravatar.cc/150?u=${decodedToken.uid}`;
-
-        // // Simulate test execution
-        // const { executionTime, status } = await runTest(filePath, decodedToken.uid);
-
-        // const submission = {
-        //     userId: decodedToken.uid,
-        //     username,
-        //     avatarUrl,
-        //     filePath,
-        //     executionTime,
-        //     status,
-        //     language: 'Java',
-        //     date: new Date(),
-        // };
-
-        // const submissionRef = await db.collection('submissions').add(submission);
+    // 5. Return the response from the Cloud Run service
+    return NextResponse.json(response.data);
 
         // return NextResponse.json({ status: 'success', submissionId: submissionRef.id });
 
@@ -74,22 +64,13 @@ export async function POST(req: Request) {
         return NextResponse.json({ status: 'success', messageId: messageId }, {
             headers: { 'Access-Control-Allow-Origin': '*' }
         });
+  } catch (error: any) {
+    console.error('Error calling Cloud Run service:', error);
+    // Return an error response
+    return NextResponse.json({ error: 'Failed to execute code', details: error.message }, { status: error.response?.status || 500 });
+  }
 
-    } catch (error) {
-        console.error('Error verifying token or processing file:', error);
-        return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    }
 }
 
-// Add CORS headers for preflight requests
-export async function OPTIONS(request: Request) {
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-      'Access-Control-Max-Age': '86400',
-    },
-  });
+
 }

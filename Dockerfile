@@ -18,14 +18,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the execution script into the container and make it executable
-COPY runner/execute.sh /usr/local/bin/execute
+COPY runner/execute.sh /usr/local/bin/execute # Keep this script
 RUN chmod +x /usr/local/bin/execute
+
+# Copy the Python server script into the container
+COPY runner/server.py /app/server.py # Copy the new server script
 
 # Set up a non-root user for added security.
 # Running processes as a non-root user is a critical security best practice.
 RUN useradd -m -s /bin/bash sandboxuser
 USER sandboxuser
 
-# Set the working directory for the user's code
-# Set the entrypoint to our execution script
-ENTRYPOINT ["execute"]
+# Set the entrypoint to run the Python server
+# The Python server will call the execute.sh script
+ENTRYPOINT ["python3", "/app/server.py"]

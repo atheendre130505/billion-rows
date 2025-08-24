@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { GoogleAuth } from 'google-auth-library';
-
+import { admin } from '@/lib/firebase-admin';
 
 // ** IMPORTANT: Replace with your actual Cloud Run Service URL after deployment **
 // You can find this URL in the Cloud Run service details in the Google Cloud Console
 // or in the output of the `gcloud run deploy` command.
-const CLOUD_RUN_URL = 'YOUR_CLOUD_RUN_URL_HERE';
+const CLOUD_RUN_URL = 'https://code-execution-service-710657708781.us-central1.run.app';
 
 // Use GoogleAuth to get an identity token for the Cloud Run service
 // This ensures that only your authenticated Firebase Function can call the Cloud Run service.
@@ -13,30 +13,25 @@ const CLOUD_RUN_URL = 'YOUR_CLOUD_RUN_URL_HERE';
 const googleAuth = new GoogleAuth();
 
 export async function POST(req: Request) {
-  // Check if the Cloud Run URL placeholder has been replaced
-  if (CLOUD_RUN_URL === 'YOUR_CLOUD_RUN_URL_HERE') {
-    console.error('CLOUD_RUN_URL has not been set in src/app/api/trigger-test/route.ts');
-    return NextResponse.json(
-      { error: 'Server not configured: Cloud Run URL is missing.' },
-      { status: 500 }
-    );
-  }
-
   try {
-    // 1. Get language and code from the request body
-    const { language, code } = await req.json();
+    // 1. Get filePath from the request body
+    const { filePath } = await req.json();
 
-    if (!language || !code) {
-      return NextResponse.json({ error: 'Language and code are required.' }, { status: 400 });
+    if (!filePath) {
+      return NextResponse.json({ error: 'filePath is required.' }, { status: 400 });
     }
 
-    // 2. Base64 encode the code
-    const encodedCode = Buffer.from(code).toString('base64');
+    // 2. Download the file from Firebase Storage
+    const bucket = admin.storage().bucket();
+    const file = bucket.file(filePath);
+    const [fileContent] = await file.download();
 
-    // 3. Get an authenticated client for the Cloud Run service
+    // 3. Extract the language from the file extension
+    const fileExtension = filePath.split('.').pop();
+    const language = fileExtension || 'unknown'; // Default to 'unknown' if no extension
+
+    // 4. Get an authenticated client for the Cloud Run service and send the code
     const client = await googleAuth.getIdTokenClient(CLOUD_RUN_URL);
-
-    // 4. Send the code to the Cloud Run service
     const response = await client.request({
       url: CLOUD_RUN_URL,
       method: 'POST',

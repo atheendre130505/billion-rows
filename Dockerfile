@@ -17,12 +17,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     procps \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the execution script into the container and make it executable
-COPY runner/execute.sh /usr/local/bin/execute # Keep this script
+# Copy the entire build context to a temporary directory
+COPY . /tmp/buildcontext
+
+# Move the execution script to its final destination and make it executable
+RUN mv /tmp/buildcontext/runner/execute.sh /usr/local/bin/execute
 RUN chmod +x /usr/local/bin/execute
 
-# Copy the Python server script into the container
-COPY runner/server.py /app/server.py # Copy the new server script
+# Create the application directory
+RUN mkdir /app
+
+# List the contents of the build context for debugging
+RUN ls -R /tmp/buildcontext
+# Move the Python server script to its final destination
+RUN mv /tmp/buildcontext/runner/server.py /app/server.py
 
 # Set up a non-root user for added security.
 # Running processes as a non-root user is a critical security best practice.

@@ -1,27 +1,20 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import LeaderboardTable from "./leaderboard-table";
-import AiAnalyzer from "./ai-analyzer";
-import { Trophy, Sparkles } from "lucide-react";
+import { Trophy } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 export default function LeaderboardTabs() {
     return (
-        <Tabs defaultValue="leaderboard">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="leaderboard">
-                    <Trophy className="mr-2 h-4 w-4" />
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Trophy className="h-6 w-6 text-yellow-500" />
                     Leaderboard
-                </TabsTrigger>
-                <TabsTrigger value="ai-analyzer">
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    AI Code Analyzer
-                </TabsTrigger>
-            </TabsList>
-            <TabsContent value="leaderboard" className="mt-6">
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
                 <LeaderboardTable />
-            </TabsContent>
-            <TabsContent value="ai-analyzer" className="mt-6">
-                <AiAnalyzer />
-            </TabsContent>
-        </Tabs>
+            </CardContent>
+        </Card>
     )
 }

@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     const response = await client.request({
       url: CLOUD_RUN_URL,
       method: 'POST',
-      data: { language, code: encodedCode },
+      data: { language, code: fileContent.toString('base64') },
       responseType: 'json',
     });
 

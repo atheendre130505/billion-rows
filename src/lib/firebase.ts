@@ -8,12 +8,12 @@ import { getFunctions } from "firebase/functions";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  projectId: "brc-speedster",
-  appId: "1:710657708781:web:c849b2834e4ac2bf29f2e4",
-  storageBucket: "brc-speedster.appspot.com",
-  apiKey: "AIzaSyACchi_gEquPV_WwyYUGQnCZUpbbsHRm4U",
-  authDomain: "brc-speedster.firebaseapp.com",
-  messagingSenderId: "710657708781",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
 };
 
 // Initialize Firebase

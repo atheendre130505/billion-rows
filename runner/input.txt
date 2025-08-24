@@ -1,0 +1,6 @@
+Hamburg;12.3
+New York;20.5
+Tokyo;15.8
+Hamburg;11.9
+New York;21.1
+Tokyo;16.2

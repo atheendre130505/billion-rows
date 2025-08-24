@@ -31,7 +31,6 @@ fi
 LANGUAGE=$1
 ENCODED_CODE=$2
 FILENAME=""
-COMPILE_CMD=""
 EXEC_CMD=""
 
 # --- 2. Create Secure Temporary Directory ---
@@ -43,6 +42,8 @@ trap 'rm -rf -- "$TEMP_DIR"' EXIT
 cd "$TEMP_DIR" || exit 1
 
 # --- 3. Decode Code and Set Language-Specific Commands ---
+# We store the compile and execution commands in variables to be run later.
+# This allows us to handle both compiled and interpreted languages uniformly.
 case "$LANGUAGE" in
   "java")
     FILENAME="Solution.java"
@@ -80,23 +81,20 @@ case "$LANGUAGE" in
 esac
 
 # --- 4. Compile and Run with Timing ---
-# This block executes the compile and run commands.
+# This block conditionally executes the compile and run commands based on the language.
+# - If a compile command exists, it's run first, and if successful, the execution command runs.
+# - If no compile command exists (interpreted language), only the execution command runs.
 # - The user code's stdout is redirected to `output.txt`.
 # - The user code's stderr (compilation or runtime errors) is redirected to `errors.txt`.
 # - The `time` command itself prints to stderr. We wrap the entire execution in braces `{...}`
 #   and redirect its stderr (`2>&1`) to be captured by the `TIME_RESULT` variable.
-if [ -s errors.txt ]; then
-  TIME_RESULT="0.00"
+if [ -n "$COMPILE_CMD" ]; then
+  # For compiled languages: compile then execute
+  TIME_RESULT=$({ /usr/bin/time -f "%e" bash -c "$COMPILE_CMD && $EXEC_CMD" > output.txt 2> errors.txt; } 2>&1)
 else
-  if [ -n "$COMPILE_CMD" ]; then
-    # For compiled languages
-    TIME_RESULT=$({ /usr/bin/time -f "%e" bash -c "$COMPILE_CMD && $EXEC_CMD" > output.txt 2> errors.txt; } 2>&1)
-  else
-    # For interpreted languages
-    TIME_RESULT=$({ /usr/bin/time -f "%e" bash -c "$EXEC_CMD" > output.txt 2> errors.txt; } 2>&1)
-  fi
+  # For interpreted languages: just execute
+  TIME_RESULT=$({ /usr/bin/time -f "%e" bash -c "$EXEC_CMD" > output.txt 2> errors.txt; } 2>&1)
 fi
-
 # --- 5. Read Results ---
 OUTPUT=$(cat output.txt)
 ERROR_OUTPUT=$(cat errors.txt)

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { GoogleAuth } from 'google-auth-library';
 
 import { NextResponse } from 'next/server';
-import { auth, db } from '@/lib/firebase-admin';
 
 // ** IMPORTANT: Replace with your actual Cloud Run Service URL after deployment **
 // You can find this URL in the Cloud Run service details in the Google Cloud Console
@@ -12,7 +11,7 @@ const CLOUD_RUN_URL = 'YOUR_CLOUD_RUN_URL_HERE';
 // Use GoogleAuth to get an identity token for the Cloud Run service
 // This ensures that only your authenticated Firebase Function can call the Cloud Run service.
 // The identity token is automatically handled by the library in server environments.
-const auth = new GoogleAuth();
+const googleAuth = new GoogleAuth();
 
 export async function POST(req: Request) {
   // Check if the Cloud Run URL placeholder has been replaced
@@ -36,7 +35,7 @@ export async function POST(req: Request) {
     const encodedCode = Buffer.from(code).toString('base64');
 
     // 3. Get an authenticated client for the Cloud Run service
-    const client = await auth.getIdTokenClient(CLOUD_RUN_URL);
+    const client = await googleAuth.getIdTokenClient(CLOUD_RUN_URL);
 
     // 4. Send the code to the Cloud Run service
     const response = await client.request({
@@ -49,28 +48,10 @@ export async function POST(req: Request) {
     // 5. Return the response from the Cloud Run service
     return NextResponse.json(response.data);
 
-        // return NextResponse.json({ status: 'success', submissionId: submissionRef.id });
-
-        // Instead of simulating test execution directly, publish a message to Pub/Sub
-        const message = {
-          filePath: filePath,
-          userId: decodedToken.uid,
-          username: username,
-          avatarUrl: avatarUrl,
-        };
-        const dataBuffer = Buffer.from(JSON.stringify(message));
-        const messageId = await pubSubClient.topic('test-runner-topic').publishMessage({data: dataBuffer});
-
-        return NextResponse.json({ status: 'success', messageId: messageId }, {
-            headers: { 'Access-Control-Allow-Origin': '*' }
-        });
   } catch (error: any) {
     console.error('Error calling Cloud Run service:', error);
     // Return an error response
     return NextResponse.json({ error: 'Failed to execute code', details: error.message }, { status: error.response?.status || 500 });
   }
-
-}
-
 
 }
